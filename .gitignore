@@ -1,0 +1,59 @@
+# Ethereum / Foundry
+ethereum/cache/
+ethereum/out/
+ethereum/broadcast/
+ethereum/lib/
+ethereum/.env
+ethereum/.gas-snapshot
+
+# Near / Rust
+near/contracts/target/
+near/contracts/Cargo.lock
+near/neardev/
+near/contracts/.env
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn/
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Build artifacts
+dist/
+build/
+*.wasm
+
+# Logs
+logs/
+*.log

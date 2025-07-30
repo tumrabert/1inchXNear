@@ -57,3 +57,5 @@ build/
 # Logs
 logs/
 *.log
+
+.claude/

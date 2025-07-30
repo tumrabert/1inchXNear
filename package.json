@@ -1,0 +1,74 @@
+{
+  "name": "@1inch-unite/cross-chain-bridge",
+  "version": "1.0.0",
+  "description": "1inch Unite Hackathon - Ethereum ↔ Near Cross-Chain Atomic Swaps",
+  "main": "index.js",
+  "scripts": {
+    "build": "npm run build:ethereum && npm run build:near && npm run build:shared",
+    "build:ethereum": "cd ethereum && forge build",
+    "build:near": "cd near/contracts && cargo build --target wasm32-unknown-unknown --release",
+    "build:shared": "cd shared && npm run build",
+    "deploy": "npm run deploy:all",
+    "deploy:all": "npx ts-node scripts/deploy-all.ts",
+    "deploy:ethereum": "npx ts-node ethereum/scripts/deploy-sepolia.ts", 
+    "deploy:near": "npx ts-node near/scripts/deploy-testnet.ts",
+    "test": "npm run test:shared && npm run test:ethereum && npm run test:near",
+    "test:shared": "cd shared && npm test",
+    "test:ethereum": "cd ethereum && forge test",
+    "test:near": "cd near/contracts && cargo test",
+    "test:integration": "npx ts-node shared/tests/integration.test.ts",
+    "demo": "npm run demo:start",
+    "demo:start": "npx ts-node shared/demo/cross-chain-demo.ts",
+    "dev:demo": "npm run build:demo && cd demo && npm start",
+    "build:demo": "npm run build:demo-ui",
+    "build:demo-ui": "cd demo && npm run build",
+    "setup": "npm run setup:deps && npm run setup:env",
+    "setup:deps": "npm install && cd shared && npm install && cd ../demo && npm install",
+    "setup:env": "echo 'Copy .env.example to .env and fill in your credentials'",
+    "lint": "eslint . --ext .ts,.js --fix",
+    "type-check": "tsc --noEmit",
+    "clean": "npm run clean:ethereum && npm run clean:near && npm run clean:shared",
+    "clean:ethereum": "cd ethereum && forge clean",
+    "clean:near": "cd near/contracts && cargo clean",
+    "clean:shared": "cd shared && rm -rf dist node_modules",
+    "verify": "npm run verify:deployment",
+    "verify:deployment": "npx ts-node scripts/verify-deployment.ts"
+  },
+  "keywords": [
+    "1inch",
+    "hackathon",
+    "cross-chain",
+    "atomic-swap",
+    "ethereum",
+    "near",
+    "defi",
+    "fusion"
+  ],
+  "author": "1inch Unite Hackathon Team",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0",
+    "eslint": "^8.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0"
+  },
+  "dependencies": {
+    "ethers": "^6.8.0",
+    "near-api-js": "^4.0.0",
+    "dotenv": "^16.3.0"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tumrabert/1inchXNear.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tumrabert/1inchXNear/issues"
+  },
+  "homepage": "https://github.com/tumrabert/1inchXNear#readme"
+}

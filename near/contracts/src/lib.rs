@@ -1,9 +1,12 @@
 use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
-use near_sdk::{env, near_bindgen, AccountId, Balance, PanicOnDefault, Promise, PromiseResult};
-use near_sdk::collections::UnorderedMap;
+use near_sdk::{env, near_bindgen, AccountId, PanicOnDefault, Promise, NearToken, Gas};
+use near_contract_standards::fungible_token::Balance;
+use near_sdk::serde::{Deserialize, Serialize};
 
 // Timelock stages corresponding to Ethereum implementation
-#[derive(BorshDeserialize, BorshSerialize, Clone, Copy, Debug)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Copy, Debug)]
+#[serde(crate = "near_sdk::serde")]
+#[borsh(use_discriminant = true)]
 pub enum Stage {
     SrcWithdrawal = 0,      // Private withdrawal on Ethereum
     SrcPublicWithdrawal,    // Public withdrawal on Ethereum  
@@ -14,10 +17,30 @@ pub enum Stage {
     DstCancellation,        // Cancellation on Near
 }
 
+// Merkle proof structure for partial fills
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct MerkleProof {
+    pub index: u64,              // Fill percentage index (0-N)
+    pub secret_hash: [u8; 32],   // keccak256(secret) for this index
+    pub proof: Vec<[u8; 32]>,    // Merkle proof path
+}
+
+// Partial fill validation structure
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "near_sdk::serde")]
+pub struct PartialFillInfo {
+    pub merkle_root: [u8; 32],       // Root of Merkle tree containing all secrets
+    pub total_parts: u64,            // Total number of parts (N+1 secrets)
+    pub used_indices: Vec<u64>,      // Track which indices have been used
+    pub last_validated: u64,         // Last validated index for sequential fills
+}
+
 // Escrow immutable data structure
-#[derive(BorshDeserialize, BorshSerialize, Clone, Debug)]
+#[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize, Clone, Debug)]
+#[serde(crate = "near_sdk::serde")]
 pub struct EscrowImmutables {
-    pub hashlock: [u8; 32],           // keccak256(secret)
+    pub hashlock: [u8; 32],           // keccak256(secret) or Merkle root for partial fills
     pub token_id: AccountId,          // FT contract account
     pub amount: Balance,              // Token amount
     pub maker: AccountId,             // Near user account
@@ -25,6 +48,7 @@ pub struct EscrowImmutables {
     pub safety_deposit: Balance,      // NEAR safety deposit
     pub timelocks: u64,               // Packed timelock stages
     pub deployed_at: u64,             // Block height
+    pub partial_fill_info: Option<PartialFillInfo>, // None for single fill, Some for partial fills
 }
 
 // Main escrow contract for destination chain (Near)
@@ -35,11 +59,96 @@ pub struct EscrowDst {
     pub withdrawn: bool,
     pub cancelled: bool,
     pub revealed_secret: Option<Vec<u8>>,
+    pub partial_fill_state: Option<PartialFillInfo>, // Mutable state for partial fills
+    pub filled_amount: Balance,                      // Amount already filled in partial fills
+}
+
+// Merkle tree validation utilities
+impl EscrowDst {
+    /// Validate Merkle proof for partial fill
+    fn validate_merkle_proof(&self, proof: &MerkleProof) -> bool {
+        if let Some(ref partial_info) = self.partial_fill_state {
+            // Compute leaf hash: keccak256(index || secret_hash)
+            let mut leaf_data = Vec::new();
+            leaf_data.extend_from_slice(&proof.index.to_le_bytes());
+            leaf_data.extend_from_slice(&proof.secret_hash);
+            let leaf_hash = env::keccak256(&leaf_data);
+
+            // Verify Merkle proof
+            self.verify_merkle_proof(leaf_hash, &proof.proof, partial_info.merkle_root)
+        } else {
+            false // No partial fills supported if partial_fill_state is None
+        }
+    }
+
+    /// Verify Merkle proof against root
+    fn verify_merkle_proof(&self, leaf: Vec<u8>, proof: &[[u8; 32]], root: [u8; 32]) -> bool {
+        let mut computed_hash: [u8; 32] = leaf.try_into().unwrap_or_default();
+        
+        for proof_element in proof {
+            // Determine hash order (smaller hash first for consistent ordering)
+            if computed_hash <= *proof_element {
+                let mut combined = Vec::new();
+                combined.extend_from_slice(&computed_hash);
+                combined.extend_from_slice(proof_element);
+                let hash_vec = env::keccak256(&combined);
+                computed_hash = hash_vec.try_into().unwrap_or_default();
+            } else {
+                let mut combined = Vec::new();
+                combined.extend_from_slice(proof_element);
+                combined.extend_from_slice(&computed_hash);
+                let hash_vec = env::keccak256(&combined);
+                computed_hash = hash_vec.try_into().unwrap_or_default();
+            }
+        }
+        
+        computed_hash == root
+    }
+
+    /// Check if partial fill is valid (sequential and percentage-based)
+    fn is_valid_partial_fill(&self, index: u64, remaining_amount: Balance) -> bool {
+        if let Some(ref partial_info) = self.partial_fill_state {
+            // Check if index is in valid range
+            if index >= partial_info.total_parts {
+                return false;
+            }
+
+            // Check if index hasn't been used
+            if partial_info.used_indices.contains(&index) {
+                return false;
+            }
+
+            // For sequential fills, index should be next in sequence
+            if index != partial_info.last_validated + 1 && partial_info.last_validated != 0 {
+                return false;
+            }
+
+            // Validate amount corresponds to expected percentage
+            let expected_fill_amount = self.calculate_partial_amount(index);
+            let tolerance = expected_fill_amount / 100; // 1% tolerance
+            
+            remaining_amount >= expected_fill_amount.saturating_sub(tolerance) &&
+            remaining_amount <= expected_fill_amount + tolerance
+        } else {
+            false
+        }
+    }
+
+    /// Calculate expected amount for partial fill index
+    fn calculate_partial_amount(&self, index: u64) -> Balance {
+        if let Some(ref partial_info) = self.partial_fill_state {
+            // For N parts: index 0 = (0-25%], index 1 = (25-50%], etc.
+            let percentage = ((index + 1) * 100) / partial_info.total_parts;
+            (self.immutables.amount * percentage as u128) / 100
+        } else {
+            0
+        }
+    }
 }
 
 #[near_bindgen]
 impl EscrowDst {
-    /// Initialize new escrow contract
+    /// Initialize new escrow contract (single fill)
     #[init]
     pub fn new(
         hashlock: [u8; 32],
@@ -60,17 +169,65 @@ impl EscrowDst {
                 safety_deposit,
                 timelocks,
                 deployed_at: env::block_height(),
+                partial_fill_info: None,
             },
             withdrawn: false,
             cancelled: false,
             revealed_secret: None,
+            partial_fill_state: None,
+            filled_amount: 0,
         }
     }
 
-    /// Withdraw tokens by revealing the secret (private phase)
+    /// Initialize new escrow contract with partial fill support
+    #[init]
+    pub fn new_with_partial_fills(
+        merkle_root: [u8; 32],
+        token_id: AccountId,
+        amount: Balance,
+        maker: AccountId,
+        taker: AccountId,
+        safety_deposit: Balance,
+        timelocks: u64,
+        total_parts: u64,
+    ) -> Self {
+        let partial_fill_info = PartialFillInfo {
+            merkle_root,
+            total_parts,
+            used_indices: Vec::new(),
+            last_validated: 0,
+        };
+
+        Self {
+            immutables: EscrowImmutables {
+                hashlock: merkle_root, // Use Merkle root as hashlock for partial fills
+                token_id,
+                amount,
+                maker,
+                taker,
+                safety_deposit,
+                timelocks,
+                deployed_at: env::block_height(),
+                partial_fill_info: Some(partial_fill_info.clone()),
+            },
+            withdrawn: false,
+            cancelled: false,
+            revealed_secret: None,
+            partial_fill_state: Some(partial_fill_info),
+            filled_amount: 0,
+        }
+    }
+
+    /// Withdraw tokens by revealing the secret (private phase) - single fill
     pub fn withdraw(&mut self, secret: Vec<u8>) -> Promise {
         self.validate_withdraw(&secret);
         self.execute_withdrawal(secret, &env::predecessor_account_id())
+    }
+
+    /// Withdraw tokens with partial fill using Merkle proof
+    pub fn withdraw_partial(&mut self, secret: Vec<u8>, proof: MerkleProof) -> Promise {
+        self.validate_partial_withdraw(&secret, &proof);
+        self.execute_partial_withdrawal(secret, proof, &env::predecessor_account_id())
     }
 
     /// Public withdrawal allowing anyone to withdraw after timeout
@@ -93,8 +250,8 @@ impl EscrowDst {
             "ft_transfer".to_string(),
             format!(r#"{{"receiver_id": "{}", "amount": "{}"}}"#, 
                    self.immutables.taker, amount).into_bytes(),
-            1, // 1 yoctoNEAR for security
-            env::prepaid_gas() / 3,
+            NearToken::from_yoctonear(1), // 1 yoctoNEAR for security
+            Gas::from_tgas(30),
         )
     }
 
@@ -115,15 +272,49 @@ impl EscrowDst {
         self.revealed_secret.as_ref()
     }
 
+    pub fn get_partial_fill_state(&self) -> Option<&PartialFillInfo> {
+        self.partial_fill_state.as_ref()
+    }
+
     // Private helper functions
     fn validate_withdraw(&self, secret: &[u8]) {
         assert!(!self.withdrawn, "Already withdrawn");
         assert!(!self.cancelled, "Already cancelled");
         assert_eq!(env::predecessor_account_id(), self.immutables.taker, "Only taker can withdraw");
         
-        // Verify secret matches hashlock
-        let hash = env::keccak256(secret);
-        assert_eq!(hash, self.immutables.hashlock, "Invalid secret");
+        // For single fills, verify secret matches hashlock directly
+        if self.immutables.partial_fill_info.is_none() {
+            let hash = env::keccak256(secret);
+            let hash_array: [u8; 32] = hash.try_into().unwrap_or_default();
+            assert_eq!(hash_array, self.immutables.hashlock, "Invalid secret");
+        } else {
+            env::panic_str("Use withdraw_partial for partial fills");
+        }
+        
+        // Check timelock stage
+        let current_stage = self.get_current_stage();
+        assert!(matches!(current_stage, Stage::DstWithdrawal), "Not in withdrawal stage");
+    }
+
+    fn validate_partial_withdraw(&self, secret: &[u8], proof: &MerkleProof) {
+        assert!(!self.withdrawn, "Already withdrawn");
+        assert!(!self.cancelled, "Already cancelled");
+        assert_eq!(env::predecessor_account_id(), self.immutables.taker, "Only taker can withdraw");
+        
+        // Ensure this is a partial fill escrow
+        assert!(self.immutables.partial_fill_info.is_some(), "Not a partial fill escrow");
+        
+        // Verify secret matches the proof's secret hash
+        let secret_hash = env::keccak256(secret);
+        let secret_hash_array: [u8; 32] = secret_hash.try_into().unwrap_or_default();
+        assert_eq!(secret_hash_array, proof.secret_hash, "Secret doesn't match proof");
+        
+        // Validate Merkle proof
+        assert!(self.validate_merkle_proof(proof), "Invalid Merkle proof");
+        
+        // Check if this partial fill is valid
+        let remaining_amount = self.immutables.amount - self.filled_amount;
+        assert!(self.is_valid_partial_fill(proof.index, remaining_amount), "Invalid partial fill");
         
         // Check timelock stage
         let current_stage = self.get_current_stage();
@@ -136,7 +327,8 @@ impl EscrowDst {
         
         // Verify secret matches hashlock
         let hash = env::keccak256(secret);
-        assert_eq!(hash, self.immutables.hashlock, "Invalid secret");
+        let hash_array: [u8; 32] = hash.try_into().unwrap_or_default();
+        assert_eq!(hash_array, self.immutables.hashlock, "Invalid secret");
         
         // Check timelock stage
         let current_stage = self.get_current_stage();
@@ -171,11 +363,46 @@ impl EscrowDst {
             "ft_transfer".to_string(),
             format!(r#"{{"receiver_id": "{}", "amount": "{}"}}"#, 
                    self.immutables.maker, self.immutables.amount).into_bytes(),
-            1, // 1 yoctoNEAR for security
-            env::prepaid_gas() / 3,
+            NearToken::from_yoctonear(1), // 1 yoctoNEAR for security
+            Gas::from_tgas(30),
         );
 
-        let safety_deposit_transfer = Promise::new(caller.clone()).transfer(self.immutables.safety_deposit);
+        let safety_deposit_transfer = Promise::new(caller.clone()).transfer(NearToken::from_yoctonear(self.immutables.safety_deposit));
+
+        token_transfer.and(safety_deposit_transfer)
+    }
+
+    fn execute_partial_withdrawal(&mut self, secret: Vec<u8>, proof: MerkleProof, caller: &AccountId) -> Promise {
+        // Calculate fill amount for this index
+        let fill_amount = self.calculate_partial_amount(proof.index) - self.filled_amount;
+        
+        // Update state
+        self.filled_amount += fill_amount;
+        self.revealed_secret = Some(secret);
+        
+        // Update partial fill state
+        if let Some(ref mut partial_state) = self.partial_fill_state {
+            partial_state.used_indices.push(proof.index);
+            partial_state.last_validated = proof.index;
+            
+            // Check if this completes all fills
+            if self.filled_amount >= self.immutables.amount {
+                self.withdrawn = true;
+            }
+        }
+
+        // Transfer partial amount to maker and proportional safety deposit to caller
+        let proportional_deposit = (self.immutables.safety_deposit * fill_amount as u128) / self.immutables.amount;
+        
+        let token_transfer = Promise::new(self.immutables.token_id.clone()).function_call(
+            "ft_transfer".to_string(),
+            format!(r#"{{"receiver_id": "{}", "amount": "{}"}}"#, 
+                   self.immutables.maker, fill_amount).into_bytes(),
+            NearToken::from_yoctonear(1), // 1 yoctoNEAR for security
+            Gas::from_tgas(30),
+        );
+
+        let safety_deposit_transfer = Promise::new(caller.clone()).transfer(NearToken::from_yoctonear(proportional_deposit));
 
         token_transfer.and(safety_deposit_transfer)
     }
@@ -188,11 +415,11 @@ impl EscrowDst {
             "ft_transfer".to_string(),
             format!(r#"{{"receiver_id": "{}", "amount": "{}"}}"#, 
                    self.immutables.taker, self.immutables.amount).into_bytes(),
-            1, // 1 yoctoNEAR for security
-            env::prepaid_gas() / 3,
+            NearToken::from_yoctonear(1), // 1 yoctoNEAR for security
+            Gas::from_tgas(30),
         );
 
-        let safety_deposit_transfer = Promise::new(caller.clone()).transfer(self.immutables.safety_deposit);
+        let safety_deposit_transfer = Promise::new(caller.clone()).transfer(NearToken::from_yoctonear(self.immutables.safety_deposit));
 
         token_transfer.and(safety_deposit_transfer)
     }
@@ -209,82 +436,6 @@ impl EscrowDst {
         } else {
             Stage::DstCancellation
         }
-    }
-}
-
-// Factory contract for deploying escrow contracts
-#[near_bindgen]
-#[derive(BorshDeserialize, BorshSerialize, PanicOnDefault)]
-pub struct EscrowFactory {
-    pub escrow_contracts: UnorderedMap<Vec<u8>, AccountId>,
-}
-
-#[near_bindgen]
-impl EscrowFactory {
-    #[init]
-    pub fn new() -> Self {
-        Self {
-            escrow_contracts: UnorderedMap::new(b"e"),
-        }
-    }
-
-    /// Create new escrow contract
-    pub fn create_escrow(
-        &mut self,
-        salt: Vec<u8>,
-        hashlock: [u8; 32],
-        token_id: AccountId,
-        amount: Balance,
-        maker: AccountId,
-        taker: AccountId,
-        timelocks: u64,
-    ) -> Promise {
-        let escrow_account = self.predict_escrow_address(&salt);
-        
-        // Deploy new escrow contract
-        Promise::new(escrow_account.clone())
-            .create_account()
-            .transfer(env::attached_deposit())
-            .deploy_contract(include_bytes!("../target/wasm32-unknown-unknown/release/fusion_near_escrow.wasm").to_vec())
-            .function_call(
-                "new".to_string(),
-                format!(r#"{{
-                    "hashlock": {:?},
-                    "token_id": "{}",
-                    "amount": "{}",
-                    "maker": "{}",
-                    "taker": "{}",
-                    "safety_deposit": "{}",
-                    "timelocks": {}
-                }}"#, hashlock, token_id, amount, maker, taker, env::attached_deposit() / 2, timelocks).into_bytes(),
-                0,
-                env::prepaid_gas() / 3,
-            )
-            .then(Self::ext(env::current_account_id()).on_escrow_created(salt, escrow_account.clone()))
-    }
-
-    /// Predict escrow contract address
-    pub fn predict_escrow_address(&self, salt: &[u8]) -> AccountId {
-        let hash = env::keccak256(&[env::current_account_id().as_bytes(), salt].concat());
-        let hex_hash = hex::encode(&hash[..8]); // Use first 8 bytes for account name
-        format!("{}.{}", hex_hash, env::current_account_id()).parse().unwrap()
-    }
-
-    #[private]
-    pub fn on_escrow_created(&mut self, salt: Vec<u8>, escrow_account: AccountId) {
-        match env::promise_result(0) {
-            PromiseResult::Successful(_) => {
-                self.escrow_contracts.insert(&salt, &escrow_account);
-            }
-            PromiseResult::Failed => {
-                env::panic_str("Failed to create escrow contract");
-            }
-        }
-    }
-
-    // View functions
-    pub fn get_escrow_address(&self, salt: &[u8]) -> Option<AccountId> {
-        self.escrow_contracts.get(salt)
     }
 }
 
@@ -319,27 +470,69 @@ mod tests {
     }
 
     #[test]
-    fn test_secret_validation() {
+    fn test_partial_fill_initialization() {
         let context = VMContextBuilder::new()
-            .predecessor_account_id(accounts(3)) // taker
+            .predecessor_account_id(accounts(0))
             .build();
         testing_env!(context);
 
-        let secret = b"test_secret";
-        let hashlock = env::keccak256(secret);
-        
-        let mut escrow = EscrowDst::new(
-            hashlock,
+        let merkle_root = [2u8; 32];
+        let escrow = EscrowDst::new_with_partial_fills(
+            merkle_root,
             accounts(1),
             1000u128,
             accounts(2),
             accounts(3),
             500u128,
             0u64,
+            4, // 4 parts
         );
 
-        // This would fail in real test due to token transfer, but validates logic
-        // escrow.withdraw(secret.to_vec());
-        assert_eq!(env::keccak256(secret), hashlock);
+        assert_eq!(escrow.immutables.hashlock, merkle_root);
+        assert!(escrow.get_partial_fill_state().is_some());
+        let partial_state = escrow.get_partial_fill_state().unwrap();
+        assert_eq!(partial_state.total_parts, 4);
+        assert_eq!(partial_state.used_indices.len(), 0);
+    }
+
+    #[test]
+    fn test_merkle_proof_structure() {
+        // Test Merkle proof structure
+        let proof = MerkleProof {
+            index: 0,
+            secret_hash: [3u8; 32],
+            proof: vec![[4u8; 32], [5u8; 32]],
+        };
+
+        // Validate proof structure exists
+        assert_eq!(proof.index, 0);
+        assert_eq!(proof.secret_hash, [3u8; 32]);
+        assert_eq!(proof.proof.len(), 2);
+    }
+
+    #[test]
+    fn test_partial_amount_calculation() {
+        let context = VMContextBuilder::new()
+            .predecessor_account_id(accounts(0))
+            .build();
+        testing_env!(context);
+
+        let merkle_root = [2u8; 32];
+        let escrow = EscrowDst::new_with_partial_fills(
+            merkle_root,
+            accounts(1),
+            1000u128,
+            accounts(2),
+            accounts(3),
+            500u128,
+            0u64,
+            4, // 4 parts (25% each)
+        );
+
+        // Test partial fill amount calculations
+        assert_eq!(escrow.calculate_partial_amount(0), 250); // 25% of 1000
+        assert_eq!(escrow.calculate_partial_amount(1), 500); // 50% of 1000
+        assert_eq!(escrow.calculate_partial_amount(2), 750); // 75% of 1000
+        assert_eq!(escrow.calculate_partial_amount(3), 1000); // 100% of 1000
     }
 }

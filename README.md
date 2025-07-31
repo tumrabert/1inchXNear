@@ -645,7 +645,7 @@ NEXT_PUBLIC_NEAR_RPC_URL=https://rpc.testnet.near.org
 
 #### Step 3: Verify Transactions
 - Check Ethereum transactions: https://sepolia.etherscan.io/
-- Check Near transactions: https://explorer.testnet.near.org/
+- Check Near transactions: https://testnet.nearblocks.io/
 
 ### 🐳 Docker Deployment Verification
 
@@ -1486,7 +1486,7 @@ This project represents the perfect fusion of innovative blockchain technology, 
 - **📊 GitHub**: https://github.com/tumrabert/1inchXNear
 - **🏆 Hackathon**: https://unite.1inch.io/
 - **📈 Sepolia Explorer**: https://sepolia.etherscan.io/
-- **🔍 Near Explorer**: https://explorer.testnet.near.org/
+- **🔍 Near Explorer**: https://testnet.nearblocks.io/
 
 ---
 

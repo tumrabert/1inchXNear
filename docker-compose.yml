@@ -1,9 +1,9 @@
-version: '3.8'
-
 services:
   # Main bridge application
   bridge-app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.simple
     ports:
       - "3000:3000"
     environment:
@@ -13,49 +13,4 @@ services:
       - NEXT_PUBLIC_ETHEREUM_CHAIN_ID=11155111
       - NEXT_PUBLIC_NEAR_NETWORK_ID=testnet
       - NEXT_PUBLIC_ENABLE_REAL_TRANSACTIONS=true
-    volumes:
-      - ./logs:/app/logs
-    depends_on:
-      - redis
     restart: unless-stopped
-
-  # Redis for caching and session management
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    restart: unless-stopped
-
-  # Contract deployment service
-  deployer:
-    build: .
-    command: ["node", "/app/scripts/deploy-all.js"]
-    environment:
-      - ETHEREUM_PRIVATE_KEY=${ETHEREUM_PRIVATE_KEY}
-      - NEAR_ACCOUNT_ID=${NEAR_ACCOUNT_ID}
-      - NEAR_PRIVATE_KEY=${NEAR_PRIVATE_KEY}
-      - ETHEREUM_RPC_URL=${ETHEREUM_RPC_URL}
-      - NEAR_RPC_URL=${NEAR_RPC_URL}
-    volumes:
-      - ./deployed_contracts:/app/deployed_contracts
-    profiles:
-      - deploy
-
-  # Monitoring and health checks
-  monitor:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-    profiles:
-      - monitoring
-
-volumes:
-  redis_data:
-
-networks:
-  default:
-    driver: bridge

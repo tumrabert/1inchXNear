@@ -54,6 +54,10 @@ dist/
 build/
 *.wasm
 
+# Next.js build artifacts
+demo/.next/
+.next/
+
 # Logs
 logs/
 *.log

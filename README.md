@@ -149,6 +149,7 @@ npm run test:integration
 - **[COMPLIANCE_ANALYSIS.md](COMPLIANCE_ANALYSIS.md)**: Requirements compliance verification (158% achievement)
 - **[DOCKER_VERIFICATION.md](DOCKER_VERIFICATION.md)**: Docker deployment testing and verification results
 - **[SIT_EXECUTION_REPORT.md](SIT_EXECUTION_REPORT.md)**: System Integration Testing comprehensive results
+- **[UAT_INSTRUCTIONS.md](UAT_INSTRUCTIONS.md)**: User Acceptance Testing guide and checklist
 
 ### Getting Started
 1. **Prerequisites**: Node.js 20+, Rust 1.88+, Docker (optional)

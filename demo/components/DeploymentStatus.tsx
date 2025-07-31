@@ -63,14 +63,14 @@ export default function DeploymentStatus() {
           name: 'EscrowFactory',
           address: 'escrow-factory-1690123456.rarebat823.testnet',
           status: 'deployed',
-          explorerUrl: 'https://explorer.testnet.near.org/accounts/escrow-factory-1690123456.rarebat823.testnet',
+          explorerUrl: 'https://testnet.nearblocks.io/account/escrow-factory-1690123456.rarebat823.testnet',
           verified: true
         },
         {
           name: 'Sample Escrow',
           address: 'sample-escrow-1690123567.escrow-factory-1690123456.rarebat823.testnet',
           status: 'deployed',
-          explorerUrl: 'https://explorer.testnet.near.org/accounts/sample-escrow-1690123567.escrow-factory-1690123456.rarebat823.testnet',
+          explorerUrl: 'https://testnet.nearblocks.io/account/sample-escrow-1690123567.escrow-factory-1690123456.rarebat823.testnet',
           verified: true
         }
       ],

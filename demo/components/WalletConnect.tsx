@@ -287,7 +287,7 @@ export default function WalletConnect({ onWalletChange }: WalletConnectProps) {
                   {wallets.near.accountId}
                 </code>
                 <a
-                  href={`https://explorer.testnet.near.org/accounts/${wallets.near.accountId}`}
+                  href={`https://testnet.nearblocks.io/account/${wallets.near.accountId}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-near-600 hover:text-near-700"

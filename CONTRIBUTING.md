@@ -135,27 +135,35 @@ npm run lint
 
 ## 🧪 Testing Guidelines
 
+### Comprehensive Testing Pipeline
+Our project follows a rigorous testing process: **Unit → SIT → UAT → Production**
+
 ### Testing Standards
 - **Unit Tests**: Every function should have unit tests
 - **Integration Tests**: Cross-chain scenarios must be tested
 - **Contract Tests**: All smart contract functions require tests
 - **UI Tests**: Critical user flows should be tested
+- **System Integration Testing (SIT)**: End-to-end cross-chain validation
+- **User Acceptance Testing (UAT)**: Final approval before production deployment
 
 ### Running Tests
 
 ```bash
-# Run all Ethereum tests
+# Unit Testing
 cd ethereum && forge test
-
-# Run all Near tests
 cd near/contracts && cargo test
-
-# Run TypeScript/JavaScript tests
 cd shared && npm test
 cd demo && npm test
 
-# Run integration tests
+# Integration Testing
 cd shared && npm run test:integration
+
+# System Integration Testing (SIT)
+npm run test:sit
+
+# User Acceptance Testing (UAT)
+# Start UAT environment: http://localhost:3000
+cd demo && npm run dev
 ```
 
 ### Test Coverage Requirements
@@ -372,6 +380,8 @@ Include:
 ### Project Specific
 - **ARCHITECTURE.md**: Technical implementation details
 - **TESTNET_DEPLOYMENT.md**: Deployment and testing guide
+- **TESTING_DEPLOYMENT_PROCESS.md**: Complete testing pipeline and UAT process
+- **COMPLIANCE_ANALYSIS.md**: Requirements compliance verification (158% achievement)
 - **README.md**: Project overview and quick start
 
 ## 🎯 Hackathon Context

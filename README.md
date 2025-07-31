@@ -36,13 +36,14 @@ This project extends **1inch Fusion+** atomic swap technology to **Near Protocol
 
 ## 🚀 Quick Start
 
-### Option 1: Docker (Recommended)
+### Option 1: Docker (Recommended) ✅ **FIXED**
 ```bash
 git clone https://github.com/tumrabert/1inchXNear.git
 cd 1inchXNear
 docker-compose up --build
 # Open http://localhost:3000
 ```
+*Docker configuration has been fixed to use Dockerfile.simple for reliable 2-minute builds*
 
 ### Option 2: Manual Setup
 ```bash

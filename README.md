@@ -9,7 +9,7 @@
 
 ## 🌟 Project Overview
 
-This project extends **1inch Fusion+** atomic swap technology to **Near Protocol**, enabling true cross-chain interoperability between Ethereum and Near while preserving all security guarantees. Built for the 1inch Unite Hackathon with **real testnet integration** and **production-ready deployment**.
+This project builds a **novel extension FOR 1inch Cross-chain Swap (Fusion+)** enabling Ethereum ↔ Near atomic swaps. Built with deployed **Limit Order Protocol contracts** and real cross-chain functionality for the 1inch Unite Hackathon.
 
 ### 🎯 Hackathon Achievement: **158% Requirements Exceeded**
 
@@ -59,15 +59,22 @@ npm run dev
 
 **Challenge**: Extend 1inch Fusion+ to Near blockchain ($32,000 bounty)
 
-### ✅ All Requirements Met (158% Achievement)
-- **✅ Preserve hashlock and timelock functionality** - 7-stage timelock system with keccak256 compatibility
-- **✅ Bidirectional swaps (Ethereum ↔ Near)** - Full bidirectional atomic swap implementation
-- **✅ Onchain execution demo** - **REAL TESTNET TRANSACTIONS** with live demonstration
+### ✅ All Requirements Met (100% Achievement)
+- **✅ Novel extension for 1inch Cross-chain Swap (Fusion+)** - True post-interaction extension, not standalone system
+- **✅ Preserve hashlock and timelock functionality** - Atomic swap security maintained across EVM/non-EVM
+- **✅ Bidirectional swaps (Ethereum ↔ Near)** - Full bidirectional support with same security guarantees
+- **✅ Onchain execution with Limit Order Protocol deployment** - Live contracts on Sepolia testnet
 
-### ✅ All Stretch Goals Achieved
-- **✅ User Interface** - Professional React/Next.js demo with real wallet integration
-- **✅ Enable partial fills** - Complete Merkle tree implementation for percentage-based fills
-- **✅ Relayer and resolver** - Bridge orchestrator with automated state synchronization
+### 🚀 Deployed Contracts (Sepolia Testnet)
+- **SimpleLimitOrderProtocol**: [`0xfCD530747560A12424206998c2866194663A0230`](https://sepolia.etherscan.io/address/0xfCD530747560A12424206998c2866194663A0230)
+- **FusionNearExtension**: [`0x94498d8D022c7A56FbD41e0e1637b7DB39bf796B`](https://sepolia.etherscan.io/address/0x94498d8D022c7A56FbD41e0e1637b7DB39bf796B)
+- **Status**: ✅ Deployed & Verified on Etherscan
+
+### ✅ Technical Implementation
+- **EIP-712 Order Signing** - MetaMask integration for limit order creation
+- **Post-Interaction System** - Extends Fusion+ with cross-chain coordination
+- **Atomic Swap Security** - Hashlock/timelock mechanism preserved
+- **Production UI** - Complete order lifecycle management
 
 ### 🌟 Key Features
 

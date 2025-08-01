@@ -1,0 +1,6 @@
+[submodule "demo/fusion-extension/lib/forge-std"]
+	path = demo/fusion-extension/lib/forge-std
+	url = https://github.com/foundry-rs/forge-std
+[submodule "demo/fusion-extension/lib/openzeppelin-contracts"]
+	path = demo/fusion-extension/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts

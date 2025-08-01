@@ -1,0 +1,13 @@
+[profile.default]
+src = "contracts"
+out = "out"
+libs = ["lib"]
+remappings = [
+    "@openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/"
+]
+
+[rpc_endpoints]
+sepolia = "https://sepolia.infura.io/v3/52031d0c150b41f98cbf3ac82d5eefe9"
+
+[etherscan]
+sepolia = { key = "AH9STSW5ADXV68ZUQ66HCQAJ9MUGADJGPU" }

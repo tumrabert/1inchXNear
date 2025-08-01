@@ -10,7 +10,7 @@ import {
   Play,
   CheckCircle,
 } from "lucide-react";
-import RealSwapInterface from "@/components/RealSwapInterface";
+import FusionPlusInterface from "@/components/FusionPlusInterface";
 
 export default function Home() {
   const wallets = {
@@ -43,9 +43,9 @@ export default function Home() {
             </h1>
 
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Revolutionary Ethereum ↔ Near atomic swaps powered by 1inch
-              Fusion+ architecture. Experience true cross-chain DeFi with
-              hashlock/timelock security and partial fills.
+              Novel extension for 1inch Cross-chain Swap (Fusion+) enabling 
+              Ethereum ↔ Near atomic swaps. Built with deployed Limit Order Protocol 
+              contracts and real cross-chain functionality.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
@@ -90,7 +90,7 @@ export default function Home() {
               Revolutionary Cross-Chain Features
             </h2>
             <p className="text-lg text-gray-600">
-              Built on 1inch Fusion+ architecture with Near Protocol integration
+              Extension of 1inch Fusion+ with deployed Limit Order Protocol contracts
             </p>
           </div>
 
@@ -154,25 +154,25 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Interactive Demo
+              Fusion+ Extension Demo
             </h2>
             <p className="text-lg text-gray-600">
-              Experience cross-chain atomic swaps in real-time
+              Live demo using deployed Limit Order Protocol and Near Extension contracts
             </p>
           </div>
 
           {/* Tab Navigation */}
           <div className="flex justify-center mb-8">
             <div className="card-gradient p-2 rounded-lg inline-flex">
-              <button className="px-6 py-3 rounded-md font-medium bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg">
-                🚀 Real Testnet
+              <button className="px-6 py-3 rounded-md font-medium bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg">
+                🚀 Fusion+ Extension
               </button>
             </div>
           </div>
 
           {/* Tab Content */}
           <div className="max-w-4xl mx-auto">
-            <RealSwapInterface wallets={wallets} />
+            <FusionPlusInterface />
           </div>
         </div>
       </section>

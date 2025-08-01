@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   ArrowLeftRight,
   Zap,
@@ -10,22 +9,14 @@ import {
   Github,
   Play,
   CheckCircle,
-  Wallet,
 } from "lucide-react";
-import SwapInterface from "@/components/SwapInterface";
-import DeploymentStatus from "@/components/DeploymentStatus";
-import LiveDemo from "@/components/LiveDemo";
-import WalletConnect from "@/components/WalletConnect";
 import RealSwapInterface from "@/components/RealSwapInterface";
 
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<
-    "swap" | "demo" | "status" | "real" | "wallets"
-  >("swap");
-  const [wallets, setWallets] = useState({
+  const wallets = {
     ethereum: { connected: false, address: "", balance: "0" },
     near: { connected: false, accountId: "", balance: "0" },
-  });
+  };
 
   return (
     <main className="min-h-screen">
@@ -172,69 +163,16 @@ export default function Home() {
 
           {/* Tab Navigation */}
           <div className="flex justify-center mb-8">
-            <div className="card-gradient p-2 rounded-lg inline-flex flex-wrap">
-              <button
-                onClick={() => setActiveTab("real")}
-                className={`px-4 py-2 rounded-md font-medium transition-all ${
-                  activeTab === "real"
-                    ? "bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
+            <div className="card-gradient p-2 rounded-lg inline-flex">
+              <button className="px-6 py-3 rounded-md font-medium bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg">
                 🚀 Real Testnet
-              </button>
-              <button
-                onClick={() => setActiveTab("wallets")}
-                className={`px-4 py-2 rounded-md font-medium transition-all ${
-                  activeTab === "wallets"
-                    ? "bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Wallets
-              </button>
-              <button
-                onClick={() => setActiveTab("swap")}
-                className={`px-4 py-2 rounded-md font-medium transition-all ${
-                  activeTab === "swap"
-                    ? "bg-gradient-to-r from-1inch-500 to-1inch-600 text-white shadow-lg"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Mock Interface
-              </button>
-              <button
-                onClick={() => setActiveTab("demo")}
-                className={`px-4 py-2 rounded-md font-medium transition-all ${
-                  activeTab === "demo"
-                    ? "bg-gradient-to-r from-1inch-500 to-1inch-600 text-white shadow-lg"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Live Demo
-              </button>
-              <button
-                onClick={() => setActiveTab("status")}
-                className={`px-4 py-2 rounded-md font-medium transition-all ${
-                  activeTab === "status"
-                    ? "bg-gradient-to-r from-1inch-500 to-1inch-600 text-white shadow-lg"
-                    : "text-gray-600 hover:text-gray-900"
-                }`}
-              >
-                Status
               </button>
             </div>
           </div>
 
           {/* Tab Content */}
           <div className="max-w-4xl mx-auto">
-            {activeTab === "real" && <RealSwapInterface wallets={wallets} />}
-            {activeTab === "wallets" && (
-              <WalletConnect onWalletChange={setWallets} />
-            )}
-            {activeTab === "swap" && <SwapInterface />}
-            {activeTab === "demo" && <LiveDemo />}
-            {activeTab === "status" && <DeploymentStatus />}
+            <RealSwapInterface wallets={wallets} />
           </div>
         </div>
       </section>

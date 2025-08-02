@@ -64,3 +64,6 @@ logs/
 *.log
 
 .claude/
+
+# Reference directories
+cross-chain-resolver-example/

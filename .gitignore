@@ -11,6 +11,7 @@ near/contracts/target/
 near/contracts/Cargo.lock
 near/neardev/
 near/contracts/.env
+near-contracts/fusion-escrow/target/
 
 # Node.js
 node_modules/

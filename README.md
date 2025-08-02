@@ -22,7 +22,7 @@ This project extends 1inch Fusion+ with Near Protocol support, enabling users to
 
 ```mermaid
 graph TB
-    subgraph "Ethereum (Sepolia)"
+    subgraph "Ethereum Sepolia"
         LOP[Limit Order Protocol<br/>0x45406E6742247DD5535D8FC22B19b93Dc543b6Ef]
         EXT[Fusion Near Extension<br/>0xBc5124B5ebd36Dc45C79162c060D0F590b50d170]
         MM[MetaMask Wallet]
@@ -33,15 +33,15 @@ graph TB
         NW[Near Wallet]
     end
     
-    subgraph "Frontend"
+    subgraph "Frontend App"
         UI[React Demo App<br/>localhost:3000]
         WC[Wallet Connector]
     end
     
-    subgraph "HTLC Flow"
-        SECRET[Secret: S]
-        HASH[Hashlock: H = keccak256(S)]
-        TIME[Timelock: 30 min]
+    subgraph "HTLC Security"
+        SECRET[Secret S]
+        HASH[Hashlock H]
+        TIME[Timelock 30min]
     end
     
     UI --> WC

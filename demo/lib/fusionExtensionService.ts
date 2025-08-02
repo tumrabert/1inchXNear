@@ -236,18 +236,6 @@ export class FusionExtensionService {
     return '0x' + Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('')
   }
 
-  generateHashlock(secret: string): string {
-    // Create a simple hash of the secret for the hashlock
-    // In production, this should match the contract's hashing logic (keccak256)
-    // For demo purposes, using a simple hash
-    let hash = 0
-    for (let i = 0; i < secret.length; i++) {
-      const char = secret.charCodeAt(i)
-      hash = ((hash << 5) - hash) + char
-      hash = hash & hash // Convert to 32-bit integer
-    }
-    return '0x' + Math.abs(hash).toString(16).padStart(64, '0')
-  }
 
   /**
    * Get proper token address for cross-chain orders
@@ -411,7 +399,7 @@ export class FusionExtensionService {
       // Check wallet balance before attempting transaction
       const signerAddress = await signer.getAddress()
       const balance = await provider.getBalance(signerAddress)
-      const estimatedGasCost = ethers.parseUnits('20', 'gwei') * 500000n // gas price * gas limit
+      const estimatedGasCost = ethers.parseUnits('20', 'gwei') * BigInt(500000) // gas price * gas limit
       const totalRequired = BigInt(value) + estimatedGasCost
       
       if (balance < totalRequired) {
@@ -449,7 +437,7 @@ export class FusionExtensionService {
       const protocolInterface = new ethers.Interface(LIMIT_ORDER_PROTOCOL_ABI)
       const extensionInterface = new ethers.Interface(FUSION_EXTENSION_ABI)
       
-      receipt.logs.forEach((log, index) => {
+      receipt.logs.forEach((log: any, index: number) => {
         try {
           // Try parsing as protocol event
           if (log.address.toLowerCase() === FUSION_EXTENSION_CONFIG.ethereum.limitOrderProtocol.toLowerCase()) {

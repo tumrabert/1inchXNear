@@ -1,9 +1,9 @@
-use near_sdk::borsh::{self, BorshDeserialize, BorshSerialize};
+use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::collections::UnorderedMap;
 use near_sdk::serde::{Deserialize, Serialize};
 use near_sdk::{
-    env, near_bindgen, AccountId, Balance, Promise, PanicOnDefault, 
-    require, log, Gas
+    env, near_bindgen, AccountId, NearToken, Promise, PanicOnDefault, 
+    require, log
 };
 
 #[derive(BorshDeserialize, BorshSerialize, Serialize, Deserialize)]
@@ -13,7 +13,7 @@ pub struct CrossChainOrder {
     pub direction: String,
     pub maker: AccountId,
     pub resolver: AccountId,
-    pub amount: Balance,
+    pub amount: NearToken,
     pub hashlock: String,
     pub deadline: u64,
     pub completed: bool,
@@ -34,9 +34,9 @@ impl FusionEscrow {
     #[init]
     pub fn new() -> Self {
         let mut contract = Self {
-            orders: UnorderedMap::new(b"orders"),
+            orders: UnorderedMap::new(b"o"),
             owner: env::predecessor_account_id(),
-            authorized_resolvers: UnorderedMap::new(b"resolvers"),
+            authorized_resolvers: UnorderedMap::new(b"r"),
         };
         
         contract.authorized_resolvers.insert(&env::predecessor_account_id(), &true);
@@ -63,8 +63,8 @@ impl FusionEscrow {
         );
         
         let amount = env::attached_deposit();
-        require!(amount > 0, "Must attach NEAR tokens");
-        require!(!self.orders.contains_key(&ethereum_order_hash), "Order already exists");
+        require!(amount.as_yoctonear() > 0, "Must attach NEAR tokens");
+        require!(self.orders.get(&ethereum_order_hash).is_none(), "Order already exists");
         
         let deadline = env::block_timestamp() + (deadline_seconds * 1_000_000_000);
         
@@ -98,8 +98,8 @@ impl FusionEscrow {
         deadline_seconds: u64,
     ) {
         let amount = env::attached_deposit();
-        require!(amount > 0, "Must attach NEAR tokens");
-        require!(!self.orders.contains_key(&ethereum_order_hash), "Order already exists");
+        require!(amount.as_yoctonear() > 0, "Must attach NEAR tokens");
+        require!(self.orders.get(&ethereum_order_hash).is_none(), "Order already exists");
         
         let deadline = env::block_timestamp() + (deadline_seconds * 1_000_000_000);
         
@@ -186,7 +186,7 @@ impl FusionEscrow {
         format!("{:x}", hasher.finish())
     }
 
-    pub fn get_contract_balance(&self) -> Balance {
+    pub fn get_contract_balance(&self) -> NearToken {
         env::account_balance()
     }
 }

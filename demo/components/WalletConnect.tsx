@@ -28,6 +28,113 @@ export default function WalletConnect({ onWalletChange }: WalletConnectProps) {
   })
   const [loading, setLoading] = useState({ ethereum: false, near: false })
 
+  // Check for Near wallet callback on component mount
+  useEffect(() => {
+    const checkNearCallback = async () => {
+      if (typeof window !== 'undefined') {
+        const urlParams = new URLSearchParams(window.location.search)
+        const accountId = urlParams.get('account_id')
+        const allKeys = urlParams.get('all_keys')
+        const isPopup = urlParams.get('wallet_popup')
+        
+        if (accountId && allKeys) {
+          console.log('Near wallet callback detected:', accountId)
+          
+          // Simulate getting balance (in production, you'd fetch real balance)
+          const mockBalance = '10.5432'
+          
+          if (isPopup === 'true') {
+            // This is a popup window - send message to parent and close
+            if (window.opener) {
+              window.opener.postMessage({
+                type: 'NEAR_WALLET_CONNECTED',
+                accountId: accountId,
+                balance: mockBalance
+              }, window.location.origin)
+              
+              // Close popup after short delay
+              setTimeout(() => {
+                window.close()
+              }, 1000)
+              
+              // Show success message in popup
+              document.body.innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; font-family: system-ui;">
+                  <div style="text-align: center; padding: 20px;">
+                    <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+                    <h2 style="color: #10B981; margin-bottom: 8px;">Wallet Connected!</h2>
+                    <p style="color: #6B7280; margin-bottom: 16px;">Account: ${accountId}</p>
+                    <p style="color: #6B7280; font-size: 14px;">This window will close automatically...</p>
+                  </div>
+                </div>
+              `
+            }
+          } else {
+            // This is the main window - update wallet state
+            if (!wallets.near.connected) {
+              const newNearState = {
+                connected: true,
+                accountId: accountId,
+                balance: mockBalance
+              }
+              
+              setWallets(prev => ({
+                ...prev,
+                near: newNearState
+              }))
+
+              onWalletChange?.({
+                ...wallets,
+                near: newNearState
+              })
+              
+              console.log('Near wallet connected successfully:', accountId)
+            }
+            
+            // Clean up URL parameters
+            const cleanUrl = window.location.origin + window.location.pathname
+            window.history.replaceState({}, document.title, cleanUrl)
+          }
+        }
+      }
+    }
+    
+    checkNearCallback()
+  }, [])
+
+  // Auto-detect existing wallet connections on component mount
+  useEffect(() => {
+    const checkExistingConnections = async () => {
+      // Check Ethereum connection
+      if (window.ethereum) {
+        try {
+          const accounts = await window.ethereum.request({ method: 'eth_accounts' })
+          if (accounts.length > 0) {
+            const balance = await window.ethereum.request({
+              method: 'eth_getBalance',
+              params: [accounts[0], 'latest']
+            })
+            const balanceInEther = (parseInt(balance, 16) / 1e18).toFixed(4)
+            
+            const ethereumState = {
+              connected: true,
+              address: accounts[0],
+              balance: balanceInEther,
+              chainId: 11155111
+            }
+            
+            setWallets(prev => ({ ...prev, ethereum: ethereumState }))
+            onWalletChange?.({ ...wallets, ethereum: ethereumState })
+          }
+        } catch (error) {
+          console.error('Failed to check existing Ethereum connection:', error)
+        }
+      }
+    }
+    
+    checkExistingConnections()
+  }, [])
+
   // Ethereum wallet connection
   const connectEthereum = async () => {
     if (!window.ethereum) {
@@ -101,34 +208,112 @@ export default function WalletConnect({ onWalletChange }: WalletConnectProps) {
     }
   }
 
-  // Near wallet connection (simplified)
+  // Near wallet connection with real MyNearWallet integration
   const connectNear = async () => {
     setLoading(prev => ({ ...prev, near: true }))
     
     try {
-      // For demo purposes, simulate Near wallet connection
-      // In production, you'd use @near-wallet-selector
-      const mockAccountId = 'demo-user.testnet'
-      const mockBalance = '10.0000'
+      // Real Near Wallet connection using window.near
+      if (typeof window !== 'undefined') {
+        // Check if Near Wallet is available
+        if (!(window as any).near) {
+          // Create popup for MyNearWallet connection
+          const walletUrl = `https://testnet.mynearwallet.com/login/?title=1inch%20Unite%20Bridge&success_url=${encodeURIComponent(window.location.href + '?wallet_popup=true')}&failure_url=${encodeURIComponent(window.location.href)}`
+          const popup = window.open(walletUrl, 'nearWalletPopup', 'width=500,height=600,scrollbars=yes,resizable=yes')
+          
+          // Listen for popup messages
+          const handleMessage = (event: MessageEvent) => {
+            if (event.origin !== window.location.origin) return
+            
+            if (event.data.type === 'NEAR_WALLET_CONNECTED') {
+              console.log('Near wallet connected via popup:', event.data.accountId)
+              
+              const newNearState = {
+                connected: true,
+                accountId: event.data.accountId,
+                balance: event.data.balance || '10.5432'
+              }
 
-      const newNearState = {
-        connected: true,
-        accountId: mockAccountId,
-        balance: mockBalance
+              setWallets(prev => ({
+                ...prev,
+                near: newNearState
+              }))
+
+              onWalletChange?.({
+                ...wallets,
+                near: newNearState
+              })
+              
+              // Close popup
+              if (popup) {
+                popup.close()
+              }
+              
+              // Remove event listener
+              window.removeEventListener('message', handleMessage)
+              setLoading(prev => ({ ...prev, near: false }))
+            }
+          }
+          
+          // Add message listener
+          window.addEventListener('message', handleMessage)
+          
+          // Check if popup was closed manually
+          const checkClosed = setInterval(() => {
+            if (popup?.closed) {
+              clearInterval(checkClosed)
+              window.removeEventListener('message', handleMessage)
+              setLoading(prev => ({ ...prev, near: false }))
+            }
+          }, 1000)
+          
+          return
+        }
+        
+        // If wallet is available, connect
+        const wallet = (window as any).near
+        await wallet.requestSignIn({
+          contractId: 'bridge.testnet',
+          methodNames: ['deposit', 'withdraw'],
+          successUrl: window.location.href,
+          failureUrl: window.location.href
+        })
+        
+        // Get account info
+        const account = wallet.account()
+        const accountId = account.accountId
+        const balance = await account.getAccountBalance()
+        const balanceInNear = (parseInt(balance.available) / 1e24).toFixed(4)
+
+        const newNearState = {
+          connected: true,
+          accountId: accountId,
+          balance: balanceInNear
+        }
+
+        setWallets(prev => ({
+          ...prev,
+          near: newNearState
+        }))
+
+        onWalletChange?.({
+          ...wallets,
+          near: newNearState
+        })
+      } else {
+        throw new Error('Window object not available')
       }
-
-      setWallets(prev => ({
-        ...prev,
-        near: newNearState
-      }))
-
-      onWalletChange?.({
-        ...wallets,
-        near: newNearState
-      })
 
     } catch (error) {
       console.error('Near connection failed:', error)
+      
+      // Fallback to MyNearWallet web interface
+      const walletUrl = `https://testnet.mynearwallet.com/login/?title=1inch%20Unite%20Bridge&success_url=${encodeURIComponent(window.location.href)}&failure_url=${encodeURIComponent(window.location.href)}`
+      
+      if (confirm('Near Wallet extension not found. Would you like to connect using MyNearWallet web interface?')) {
+        window.open(walletUrl, '_blank')
+        alert('Please complete the connection in the MyNearWallet tab, then refresh this page.')
+      }
     } finally {
       setLoading(prev => ({ ...prev, near: false }))
     }
@@ -333,7 +518,7 @@ export default function WalletConnect({ onWalletChange }: WalletConnectProps) {
             ) : (
               <div className="flex items-center justify-center">
                 <Wallet className="h-4 w-4 mr-2" />
-                Connect Near Wallet
+                Connect MyNearWallet
               </div>
             )}
           </button>
@@ -343,9 +528,10 @@ export default function WalletConnect({ onWalletChange }: WalletConnectProps) {
   )
 }
 
-// Global type for window.ethereum
+// Global type for window.ethereum and window.near
 declare global {
   interface Window {
     ethereum?: any
+    near?: any
   }
 }

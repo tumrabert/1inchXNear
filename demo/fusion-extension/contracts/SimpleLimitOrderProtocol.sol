@@ -174,12 +174,18 @@ contract SimpleLimitOrderProtocol is EIP712, Ownable, Pausable, ReentrancyGuard 
         uint256 makingAmount,
         uint256 takingAmount
     ) internal {
+        // Cross-chain token placeholder address
+        address CROSS_CHAIN_TOKEN_PLACEHOLDER = address(0x0000000000000000000000000000000000000001);
+        
         // Transfer making asset from maker to taker
         if (order.makerAsset == address(0)) {
             // ETH transfer - maker should have sent ETH to this contract beforehand
             require(address(this).balance >= makingAmount, "Insufficient ETH in contract");
             (bool success, ) = msg.sender.call{value: makingAmount}("");
             require(success, "ETH transfer to taker failed");
+        } else if (order.makerAsset == CROSS_CHAIN_TOKEN_PLACEHOLDER) {
+            // Cross-chain token - no actual transfer needed, handled by post-interaction
+            // This is a placeholder for tokens that exist on another chain
         } else {
             // ERC20 transfer
             IERC20(order.makerAsset).safeTransferFrom(order.maker, msg.sender, makingAmount);
@@ -197,6 +203,9 @@ contract SimpleLimitOrderProtocol is EIP712, Ownable, Pausable, ReentrancyGuard 
                 (bool refundSuccess, ) = msg.sender.call{value: msg.value - takingAmount}("");
                 require(refundSuccess, "ETH refund failed");
             }
+        } else if (order.takerAsset == CROSS_CHAIN_TOKEN_PLACEHOLDER) {
+            // Cross-chain token - no actual transfer needed, handled by post-interaction
+            // The resolver will handle the cross-chain token transfer through the extension
         } else {
             // ERC20 transfer
             IERC20(order.takerAsset).safeTransferFrom(msg.sender, order.maker, takingAmount);

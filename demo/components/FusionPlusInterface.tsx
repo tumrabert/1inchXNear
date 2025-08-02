@@ -222,9 +222,9 @@ export default function FusionPlusInterface() {
           setOrderState({
             order: result.order,
             orderHash: result.orderHash,
-            signature: result.signature,
-            secret: result.secret,
-            hashlock: result.hashlock,
+            signature: result.signature || '',
+            secret: result.secret || '',
+            hashlock: result.hashlock || '',
             status: 'created'
           })
           setStatus('✅ Cross-chain limit order created successfully!')
@@ -280,9 +280,9 @@ export default function FusionPlusInterface() {
           setStatus('Filling Ethereum order to trigger cross-chain state...')
           
           const fillResult = await fusionExtensionService.fillCrossChainOrder(
-            result.order,
-            result.signature,
-            result.order.takingAmount
+            result.order!,
+            result.signature || '',
+            result.order!.takingAmount
           )
           
           if (fillResult.success) {
@@ -291,7 +291,7 @@ export default function FusionPlusInterface() {
               ...prev, 
               order: result.order,
               orderHash: result.orderHash,
-              signature: result.signature,
+              signature: result.signature || '',
               status: 'filled' 
             } : null)
             setStatus(`✅ Cross-chain state created! NEAR escrow (${orderState.order.fromAmount} NEAR) ↔ ETH order (${orderState.order.toAmount} ETH) both ready for completion.`)

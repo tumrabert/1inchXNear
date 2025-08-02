@@ -11,7 +11,10 @@ import {
   CheckCircle,
 } from "lucide-react";
 import FusionPlusInterface from "@/components/FusionPlusInterface";
-
+import RealSwapInterface from "@/components/RealSwapInterface";
+import LiveDemo from "@/components/LiveDemo";
+import SwapInterface from "@/components/SwapInterface";
+import WalletConnect from "@/components/WalletConnect";
 export default function Home() {
   const wallets = {
     ethereum: { connected: false, address: "", balance: "0" },
@@ -43,9 +46,9 @@ export default function Home() {
             </h1>
 
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              Novel extension for 1inch Cross-chain Swap (Fusion+) enabling 
-              Ethereum ↔ Near atomic swaps. Built with deployed Limit Order Protocol 
-              contracts and real cross-chain functionality.
+              Novel extension for 1inch Cross-chain Swap (Fusion+) enabling
+              Ethereum ↔ Near atomic swaps. Built with deployed Limit Order
+              Protocol contracts and real cross-chain functionality.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
@@ -90,7 +93,8 @@ export default function Home() {
               Revolutionary Cross-Chain Features
             </h2>
             <p className="text-lg text-gray-600">
-              Extension of 1inch Fusion+ with deployed Limit Order Protocol contracts
+              Extension of 1inch Fusion+ with deployed Limit Order Protocol
+              contracts
             </p>
           </div>
 
@@ -157,7 +161,8 @@ export default function Home() {
               Fusion+ Extension Demo
             </h2>
             <p className="text-lg text-gray-600">
-              Live demo using deployed Limit Order Protocol and Near Extension contracts
+              Live demo using deployed Limit Order Protocol and Near Extension
+              contracts
             </p>
           </div>
 

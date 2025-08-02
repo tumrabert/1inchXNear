@@ -93,7 +93,8 @@ export class NearIntegrationService {
               'claim_with_secret',
               'cancel_order',
               'authorize_resolver'
-            ]
+            ],
+            useLocalViewExecution: false
           }
         ) as Contract & NearContractMethods
 
@@ -118,7 +119,8 @@ export class NearIntegrationService {
         contractId: this.contractId,
         methodNames: ['create_eth_to_near_order', 'create_near_to_eth_order', 'claim_with_secret'],
         successUrl: window.location.href,
-        failureUrl: window.location.href
+        failureUrl: window.location.href,
+        keyType: 'ed25519'
       })
     }
     
@@ -375,8 +377,10 @@ export class NearIntegrationService {
     // For demo purposes, returning mock data
     
     const mockOrder: NearEscrowOrder = {
-      ethereumOrderHash,
+      ethereum_order_hash: ethereumOrderHash,
+      direction: 'near_to_eth',
       maker: 'user.testnet',
+      resolver: 'resolver.testnet',
       amount: '2500000000000000000000000', // 2.5 NEAR in yoctoNEAR
       hashlock: '0x' + Math.random().toString(16).substring(2, 66),
       deadline: Math.floor(Date.now() / 1000) + 3600, // 1 hour from now

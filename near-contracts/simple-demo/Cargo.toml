@@ -1,0 +1,17 @@
+[package]
+name = "simple-fusion-demo"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+near-sdk = "4.1.1"
+
+[profile.release]
+panic = "abort"
+opt-level = "s"
+lto = true
+debug = false
+overflow-checks = true

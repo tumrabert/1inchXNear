@@ -67,3 +67,4 @@ logs/
 
 # Reference directories
 cross-chain-resolver-example/
+.vercel

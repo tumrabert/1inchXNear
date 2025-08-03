@@ -308,7 +308,7 @@ export default function FusionPlusInterface() {
             setStatus(`✅ Cross-chain state ready! NEAR escrow (${orderState.order.fromAmount} NEAR) ↔ ETH order (${orderState.order.toAmount} ETH) both sides prepared for completion.`)
           }
         } else {
-          setStatus(`❌ Resolver coordination failed: ${result.error}`)
+          setStatus(`❌ Resolver coordination failed: ${(result as any).error || 'Unknown error'}`)
         }
         
       } else {

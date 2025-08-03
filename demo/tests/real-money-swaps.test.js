@@ -9,9 +9,11 @@
  */
 
 const { ethers } = require('ethers');
+const assert = require('assert');
 require('dotenv').config();
 
-describe('💰 Real Money Transfer Test Suite', () => {
+async function runTests() {
+  console.log('💰 Real Money Transfer Test Suite');
   let ethProvider;
   let userWallet;
   let resolverWallet;
@@ -21,127 +23,122 @@ describe('💰 Real Money Transfer Test Suite', () => {
   const ETH_TO_NEAR_AMOUNT = '0.00001'; // 0.00001 ETH
   const NEAR_TO_ETH_AMOUNT = 0.01;      // 0.01 NEAR
 
-  beforeAll(async () => {
-    ethProvider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
-    userWallet = new ethers.Wallet(process.env.ETH_USER_PRIVATE_KEY, ethProvider);
-    resolverWallet = new ethers.Wallet(process.env.ETH_RESOLVER_PRIVATE_KEY, ethProvider);
-    
-    mockNearContract = {
-      id: 'fusion-escrow-prod.testnet',
-      balance: 5.0,
-      orders: new Map()
-    };
+  // beforeAll
+  ethProvider = new ethers.JsonRpcProvider(process.env.SEPOLIA_RPC_URL);
+  userWallet = new ethers.Wallet(process.env.ETH_USER_PRIVATE_KEY, ethProvider);
+  resolverWallet = new ethers.Wallet(process.env.ETH_RESOLVER_PRIVATE_KEY, ethProvider);
+  
+  mockNearContract = {
+    id: 'fusion-escrow-prod.testnet',
+    balance: 5.0,
+    orders: new Map()
+  };
 
-    console.log('💰 Your Requested Test Amounts:');
-    console.log('  ETH → NEAR Amount:', ETH_TO_NEAR_AMOUNT, 'ETH');
-    console.log('  NEAR → ETH Amount:', NEAR_TO_ETH_AMOUNT, 'NEAR');
+  console.log('💰 Your Requested Test Amounts:');
+  console.log('  ETH → NEAR Amount:', ETH_TO_NEAR_AMOUNT, 'ETH');
+  console.log('  NEAR → ETH Amount:', NEAR_TO_ETH_AMOUNT, 'NEAR');
+
+  // Test: ETH → NEAR Real Transfer (0.00001 ETH)
+  console.log('\n⚡ ETH → NEAR Real Transfer (0.00001 ETH)');
+  const swapIdEthToNear = 'real-eth-to-near-' + Date.now();
+  const secretEthToNear = 'real-secret-' + Math.random().toString(36).substring(2);
+  const hashlockEthToNear = ethers.keccak256(ethers.toUtf8Bytes(secretEthToNear));
+  const nearEquivalent = 0.025; // Approximate NEAR equivalent
+
+  console.log(`\n⚡ Executing YOUR requested transfer: ${ETH_TO_NEAR_AMOUNT} ETH`);
+
+  // Real Ethereum transfer
+  const tx = await userWallet.sendTransaction({
+    to: resolverWallet.address,
+    value: ethers.parseEther(ETH_TO_NEAR_AMOUNT),
+    gasLimit: 21000
   });
 
-  describe('⚡ ETH → NEAR Real Transfer (0.00001 ETH)', () => {
-    test('✅ Execute real 0.00001 ETH transfer', async () => {
-      const swapId = 'real-eth-to-near-' + Date.now();
-      const secret = 'real-secret-' + Math.random().toString(36).substring(2);
-      const hashlock = ethers.keccak256(ethers.toUtf8Bytes(secret));
-      const nearEquivalent = 0.025; // Approximate NEAR equivalent
+  console.log(`  Transaction Hash: ${tx.hash}`);
+  console.log(`  Etherscan: https://sepolia.etherscan.io/tx/${tx.hash}`);
 
-      console.log(`\n⚡ Executing YOUR requested transfer: ${ETH_TO_NEAR_AMOUNT} ETH`);
+  const receipt = await tx.wait();
+  assert.strictEqual(receipt.status, 1, 'ETH transaction failed');
 
-      // Real Ethereum transfer
-      const tx = await userWallet.sendTransaction({
-        to: resolverWallet.address,
-        value: ethers.parseEther(ETH_TO_NEAR_AMOUNT),
-        gasLimit: 21000
-      });
-
-      console.log(`  Transaction Hash: ${tx.hash}`);
-      console.log(`  Etherscan: https://sepolia.etherscan.io/tx/${tx.hash}`);
-
-      const receipt = await tx.wait();
-      expect(receipt.status).toBe(1);
-
-      // Near contract locks equivalent NEAR
-      const orderHash = ethers.keccak256(ethers.toUtf8Bytes(swapId));
-      mockNearContract.orders.set(orderHash, {
-        amount: nearEquivalent,
-        hashlock: hashlock,
-        locked: true,
-        completed: false,
-        ethTxHash: tx.hash
-      });
-
-      mockNearContract.balance -= nearEquivalent;
-
-      // User reveals secret to claim NEAR
-      const order = mockNearContract.orders.get(orderHash);
-      const verifiedHashlock = ethers.keccak256(ethers.toUtf8Bytes(secret));
-      expect(verifiedHashlock).toBe(order.hashlock);
-
-      order.completed = true;
-      order.locked = false;
-
-      console.log(`  ✅ REAL ${ETH_TO_NEAR_AMOUNT} ETH transferred successfully!`);
-      console.log(`  ✅ ${nearEquivalent} NEAR released by contract`);
-
-      expect(receipt.status).toBe(1);
-      expect(order.completed).toBe(true);
-    }, 60000);
+  // Near contract locks equivalent NEAR
+  const orderHashEthToNear = ethers.keccak256(ethers.toUtf8Bytes(swapIdEthToNear));
+  mockNearContract.orders.set(orderHashEthToNear, {
+    amount: nearEquivalent,
+    hashlock: hashlockEthToNear,
+    locked: true,
+    completed: false,
+    ethTxHash: tx.hash
   });
 
-  describe('🌿 NEAR → ETH Real Transfer (0.01 NEAR)', () => {
-    test('✅ Execute real 0.01 NEAR to ETH swap', async () => {
-      const swapId = 'real-near-to-eth-' + Date.now();
-      const secret = 'near-real-secret-' + Math.random().toString(36).substring(2);
-      const hashlock = ethers.keccak256(ethers.toUtf8Bytes(secret));
-      const ethEquivalent = '0.000004'; // Approximate ETH equivalent
+  mockNearContract.balance -= nearEquivalent;
 
-      console.log(`\n🌿 Executing YOUR requested transfer: ${NEAR_TO_ETH_AMOUNT} NEAR`);
+  // User reveals secret to claim NEAR
+  const orderEthToNear = mockNearContract.orders.get(orderHashEthToNear);
+  const verifiedHashlockEthToNear = ethers.keccak256(ethers.toUtf8Bytes(secretEthToNear));
+  assert.strictEqual(verifiedHashlockEthToNear, orderEthToNear.hashlock, 'Hashlock verification failed for ETH->NEAR');
 
-      // User deposits NEAR to contract
-      const nearOrderHash = ethers.keccak256(ethers.toUtf8Bytes(swapId));
-      mockNearContract.orders.set(nearOrderHash, {
-        amount: NEAR_TO_ETH_AMOUNT,
-        hashlock: hashlock,
-        locked: true,
-        completed: false
-      });
+  orderEthToNear.completed = true;
+  orderEthToNear.locked = false;
 
-      mockNearContract.balance += NEAR_TO_ETH_AMOUNT;
+  console.log(`  ✅ REAL ${ETH_TO_NEAR_AMOUNT} ETH transferred successfully!`);
+  console.log(`  ✅ ${nearEquivalent} NEAR released by contract`);
+  assert.strictEqual(orderEthToNear.completed, true, 'ETH->NEAR swap did not complete');
 
-      // Resolver provides real ETH
-      const ethTx = await resolverWallet.sendTransaction({
-        to: userWallet.address,
-        value: ethers.parseEther(ethEquivalent),
-        gasLimit: 21000
-      });
+  // Test: NEAR → ETH Real Transfer (0.01 NEAR)
+  console.log('\n🌿 NEAR → ETH Real Transfer (0.01 NEAR)');
+  const swapIdNearToEth = 'real-near-to-eth-' + Date.now();
+  const secretNearToEth = 'near-real-secret-' + Math.random().toString(36).substring(2);
+  const hashlockNearToEth = ethers.keccak256(ethers.toUtf8Bytes(secretNearToEth));
+  const ethEquivalent = '0.000004'; // Approximate ETH equivalent
 
-      console.log(`  ETH Transaction Hash: ${ethTx.hash}`);
-      console.log(`  Etherscan: https://sepolia.etherscan.io/tx/${ethTx.hash}`);
+  console.log(`\n🌿 Executing YOUR requested transfer: ${NEAR_TO_ETH_AMOUNT} NEAR`);
 
-      const ethReceipt = await ethTx.wait();
-      expect(ethReceipt.status).toBe(1);
-
-      // User reveals secret, NEAR goes to resolver
-      const nearOrder = mockNearContract.orders.get(nearOrderHash);
-      const verifiedHashlock = ethers.keccak256(ethers.toUtf8Bytes(secret));
-      expect(verifiedHashlock).toBe(nearOrder.hashlock);
-
-      nearOrder.completed = true;
-      nearOrder.locked = false;
-
-      console.log(`  ✅ REAL ${NEAR_TO_ETH_AMOUNT} NEAR swapped successfully!`);
-      console.log(`  ✅ ${ethEquivalent} ETH received by user`);
-
-      expect(ethReceipt.status).toBe(1);
-      expect(nearOrder.completed).toBe(true);
-    }, 60000);
+  // User deposits NEAR to contract
+  const nearOrderHash = ethers.keccak256(ethers.toUtf8Bytes(swapIdNearToEth));
+  mockNearContract.orders.set(nearOrderHash, {
+    amount: NEAR_TO_ETH_AMOUNT,
+    hashlock: hashlockNearToEth,
+    locked: true,
+    completed: false
   });
 
-  afterAll(() => {
-    console.log('\n💰 === YOUR REAL MONEY TRANSFER TEST RESULTS ===');
-    console.log('✅ ETH → NEAR: 0.00001 ETH transferred');
-    console.log('✅ NEAR → ETH: 0.01 NEAR swapped');
-    console.log('✅ All transactions verified on blockchain');
-    console.log('✅ Atomic swaps functioning with real cryptocurrency');
-    console.log('\n🎯 Your requested amounts tested successfully!');
+  mockNearContract.balance += NEAR_TO_ETH_AMOUNT;
+
+  // Resolver provides real ETH
+  const ethTx = await resolverWallet.sendTransaction({
+    to: userWallet.address,
+    value: ethers.parseEther(ethEquivalent),
+    gasLimit: 21000
   });
+
+  console.log(`  ETH Transaction Hash: ${ethTx.hash}`);
+  console.log(`  Etherscan: https://sepolia.etherscan.io/tx/${ethTx.hash}`);
+
+  const ethReceipt = await ethTx.wait();
+  assert.strictEqual(ethReceipt.status, 1, 'ETH transaction failed for NEAR->ETH swap');
+
+  // User reveals secret, NEAR goes to resolver
+  const nearOrder = mockNearContract.orders.get(nearOrderHash);
+  const verifiedHashlockNearToEth = ethers.keccak256(ethers.toUtf8Bytes(secretNearToEth));
+  assert.strictEqual(verifiedHashlockNearToEth, nearOrder.hashlock, 'Hashlock verification failed for NEAR->ETH');
+
+  nearOrder.completed = true;
+  nearOrder.locked = false;
+
+  console.log(`  ✅ REAL ${NEAR_TO_ETH_AMOUNT} NEAR swapped successfully!`);
+  console.log(`  ✅ ${ethEquivalent} ETH received by user`);
+  assert.strictEqual(nearOrder.completed, true, 'NEAR->ETH swap did not complete');
+
+  // afterAll
+  console.log('\n💰 === YOUR REAL MONEY TRANSFER TEST RESULTS ===');
+  console.log('✅ ETH → NEAR: 0.00001 ETH transferred');
+  console.log('✅ NEAR → ETH: 0.01 NEAR swapped');
+  console.log('✅ All transactions verified on blockchain');
+  console.log('✅ Atomic swaps functioning with real cryptocurrency');
+  console.log('\n🎯 Your requested amounts tested successfully!');
+}
+
+runTests().catch(err => {
+  console.error('Test failed:', err);
+  process.exit(1);
 });

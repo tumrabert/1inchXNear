@@ -140,7 +140,7 @@ Visit `http://localhost:3000` to use the application.
 - **Frontend**: Next.js 14, TypeScript, Tailwind CSS
 - **Blockchain**: Ethereum (Foundry) + Near Protocol (Rust/WASM)
 - **Wallets**: MetaMask + MyNearWallet integration
-- **Testing**: Jest with 35/36 tests passing (97.2% success)
+- **Testing**: Node.js test scripts for infrastructure and real-money transfers
 - **Security**: HTLC with hashlock/timelock protection
 
 ## 🔄 Atomic Swap Flow
@@ -189,222 +189,47 @@ sequenceDiagram
 
 ## 🧪 Testing & Verification
 
-### 🔒 **NEW: Trustless Bridge Test Suite**
+### 🔒 Trustless Bridge Test Suite
 
-Comprehensive test suite with **real cryptocurrency transfers** and trustless contract architecture:
+A comprehensive test suite runs with Node.js to verify the bridge's functionality using **real cryptocurrency transfers** on the Sepolia testnet.
 
 ```bash
-# Navigate to demo directory (all tests run from here)
+# Navigate to the demo directory
 cd demo
 
-# Install dependencies (if needed)
+# Install dependencies (if you haven't already)
 npm install
 
-# 💰 Run ALL tests including REAL MONEY transfers
+# 💰 Run ALL tests, including REAL MONEY transfers
 npm test
-
-# 🎯 Individual test suites
-npm run test:real-money    # REAL transfers: 0.00001 ETH, 0.01 NEAR
-npm run test:trustless     # Infrastructure & security tests
 ```
 
-### 💰 **Real Money Test Amounts**
+The test script will execute two main suites:
+1.  **Trustless Bridge Tests**: Verifies wallet connections, environment setup, and core infrastructure.
+2.  **Real Money Swap Tests**: Executes actual transactions for the amounts you requested.
 
-**Your Requested Transfer Amounts:**
-- **ETH → NEAR**: **0.00001 ETH** (real Sepolia transaction)
-- **NEAR → ETH**: **0.01 NEAR** (real contract-based swap)
+### 💰 Real Money Test Amounts
 
-**Expected Results:**
-```
-💰 Real Money Transfer Test Results:
-✅ ETH → NEAR: 0.00001 ETH transferred
-✅ NEAR → ETH: 0.01 NEAR swapped  
-✅ All transactions verified on blockchain
-✅ Atomic swaps functioning with real cryptocurrency
+The test suite is configured to use the following amounts for real transactions on the Sepolia testnet:
+- **ETH → NEAR**: **0.00001 ETH**
+- **NEAR → ETH**: **0.01 NEAR** (simulated against the mock contract)
 
-🏆 === FINAL TEST REPORT ===
-Test Files: 4
-✅ Passed: 4
-❌ Failed: 0
-Success Rate: 100.0%
-```
+You will see live transaction output, including links to Etherscan for verification.
 
-### 🔒 **Trustless Architecture Verified**
+### 🔒 Trustless Architecture Verified
 
 **Key Security Features Tested:**
-- ✅ **Contract-Based Fund Custody**: Funds held by smart contracts, not wallets
-- ✅ **Hashlock/Timelock Enforcement**: Cryptographic atomic completion
-- ✅ **Secret Verification**: Only correct secrets release funds
-- ✅ **Timeout Protection**: Automatic refunds after deadlines
-- ✅ **Cross-Chain Coordination**: Perfect state synchronization
-- ✅ **Real Blockchain Execution**: Actual Sepolia testnet transactions
-
-### 📊 **Test Coverage**
-
-| Test Suite | Coverage | Real Money |
-|------------|----------|------------|
-| **Trustless Bridge** | Infrastructure, security, real ETH transfers | ✅ 0.0001+ ETH |
-| **Contract Interactions** | Smart contract validations | ❌ Simulated |
-| **Atomic Swaps** | End-to-end integration flows | ❌ Mock |
-| **Real Money Transfers** | **Your requested amounts** | ✅ **0.00001 ETH, 0.01 NEAR** |
-
-### 🚀 **Quick Test Run**
-
-```bash
-# Fast test execution (from demo directory)
-cd demo
-npm run test:real-money     # Your specific amounts: 0.00001 ETH, 0.01 NEAR
-npm run test:trustless      # Core infrastructure
-```
-
-### 🎮 **Live Demo Testing**
-
-```bash
-# Start the production demo
-cd demo
-npm install
-npm run dev
-
-# Visit: http://localhost:3002
-# All 4 production wallets funded and ready
-```
-
-**Live Test Scenarios (Real Money):**
-1. **ETH → NEAR**: Connect MetaMask → Enter amount → Create order (trustless contract execution)
-2. **NEAR → ETH**: Connect Near Wallet → Switch direction → Create escrow (atomic coordination)  
-3. **Complete Swaps**: Secret reveal triggers trustless fund releases
-4. **Verify Results**: Real cryptocurrency transfers with blockchain confirmation
-
-**🔒 Trustless Operation**: All funds controlled by smart contracts, not personal wallets
-
-### 5. Contract Verification Scripts
-
-```bash
-# Verify deployed contracts
-cd demo/fusion-extension
-
-# Check Ethereum contracts
-forge verify-contract 0x45406E6742247DD5535D8FC22B19b93Dc543b6Ef \
-  contracts/SimpleLimitOrderProtocol.sol:SimpleLimitOrderProtocol \
-  --chain sepolia
-
-# Check deployment status
-npx hardhat verify --network sepolia 0xBc5124B5ebd36Dc45C79162c060D0F590b50d170
-```
-
-### 6. Manual Wallet Balance Checks
-
-```bash
-# Check wallet balances
-cd demo
-
-# Ethereum wallet balances
-node -e "
-const { ethers } = require('ethers');
-const provider = new ethers.providers.JsonRpcProvider('https://sepolia.infura.io/v3/52031d0c150b41f98cbf3ac82d5eefe9');
-Promise.all([
-  provider.getBalance('0x6411fAa79EAd4e4D57f703EcCaa8A71020Bb4259'),
-  provider.getBalance('0xb622b974ed7557145d39aee63f3aa2673bbcacca')
-]).then(balances => console.log('ETH Balances:', balances.map(b => ethers.utils.formatEther(b))));
-"
-
-# Near wallet balances  
-near view-account usernear666.testnet --network testnet
-near view-account resolvernear666.testnet --network testnet
-```
-
-### 7. E2E Integration Test
-
-```bash
-# Complete end-to-end test script
-cd shared
-
-# Run comprehensive integration test
-node -e "
-const { BridgeOrchestrator } = require('./utils');
-const config = {
-  ethereum: { /* production config */ },
-  near: { /* production config */ }
-};
-
-async function testE2E() {
-  const orchestrator = new BridgeOrchestrator(config);
-  
-  console.log('🚀 Starting E2E test...');
-  
-  // Test ETH → NEAR swap
-  const swapId = await orchestrator.executeSwap({
-    srcChain: 'ethereum',
-    dstChain: 'near',
-    srcAmount: '10000000000000000', // 0.01 ETH
-    secret: 'test-secret-' + Date.now()
-  });
-  
-  console.log('✅ Swap created:', swapId);
-  
-  // Verify swap completion
-  const status = orchestrator.getSwapStatus(swapId);
-  console.log('📊 Final status:', status.status);
-}
-
-testE2E().catch(console.error);
-"
-```
-
-### 🏆 **Test Results Summary**
-
-| Test Suite | Status | Real Money | Your Amounts | Evidence |
-|------------|--------|------------|--------------|----------|
-| **🔒 Trustless Bridge** | ✅ Complete | ✅ Real ETH transfers | Multiple confirmed | [Latest TX](https://sepolia.etherscan.io/tx/0x8851941e5dd315f7ad7cc8222a94eb4c7d4e1b7fefc863f53308714e26711c47) |
-| **💰 Real Money Swaps** | ✅ Complete | ✅ **0.00001 ETH, 0.01 NEAR** | **Your requested amounts** | Blockchain verified |
-| **🔄 Atomic Coordination** | ✅ Complete | ✅ Contract-based releases | Trustless execution | No trust required |
-| **🛡️ Security Validation** | ✅ Complete | ✅ Cryptographic enforcement | Hashlock/timelock | Production ready |
-
-### 🔒 **NEW: Trustless Architecture Implemented (2025-08-03)**
-
-**Complete Transition from Trusted to Trustless Operation!**
-
-| Architecture Aspect | Before (Trusted) | After (Trustless) | Status |
-|---------------------|------------------|-------------------|--------|
-| **Fund Source** | Personal Wallets | Smart Contracts | ✅ **Trustless** |
-| **Security Model** | Trust Required | Cryptographic | ✅ **Zero Trust** |
-| **Execution** | Manual Steps | Atomic Automatic | ✅ **Atomic** |
-| **Secret Verification** | None | Contract Enforced | ✅ **Enforced** |
-| **Refund Mechanism** | Manual | Automatic Timelock | ✅ **Automatic** |
-
-**New Trustless Features:**
-- ✅ **Contract-Based Custody**: All funds held by smart contracts
-- ✅ **Cryptographic Verification**: Hashlock enforcement by contracts
-- ✅ **Atomic Execution**: All-or-nothing completion guaranteed
-- ✅ **Zero Counterparty Risk**: No trust in human operators required
-- ✅ **Real Money Testing**: Your amounts (0.00001 ETH, 0.01 NEAR)
-
-**Test Commands:**
-```bash
-# Run complete trustless test suite
-cd tests && npm test
-
-# Your specific real money amounts
-npm run test:real-money     # 0.00001 ETH, 0.01 NEAR
-npm run test:trustless      # Infrastructure & security
-npm run test:swaps         # Atomic coordination
-```
-
-### 🏆 **Trustless Production Ready**
-
-- **Trustless Architecture**: ✅ Smart contracts control all funds
-- **Real Money Tested**: ✅ Your amounts (0.00001 ETH, 0.01 NEAR) verified
-- **Atomic Guarantees**: ✅ Cryptographic enforcement, zero trust required
-- **Contract Deployment**: ✅ Live contracts on Sepolia testnet
-- **Complete Test Suite**: ✅ 4 comprehensive test files covering all scenarios
+- ✅ **Contract-Based Fund Custody**: Funds held by smart contracts, not wallets.
+- ✅ **Hashlock/Timelock Enforcement**: Cryptographic atomic completion.
+- ✅ **Secret Verification**: Only correct secrets can release funds.
+- ✅ **Real Blockchain Execution**: Actual Sepolia testnet transactions are performed.
 
 ## 🔗 Links
 
-- **Live Demo**: `http://localhost:3000` (when running)
+- **Live Demo**: `http://localhost:3000` (when running `npm run dev`)
 - **Deployed Contracts**: 
   - [SimpleLimitOrderProtocol](https://sepolia.etherscan.io/address/0x45406E6742247DD5535D8FC22B19b93Dc543b6Ef)
   - [FusionNearExtension](https://sepolia.etherscan.io/address/0xBc5124B5ebd36Dc45C79162c060D0F590b50d170)
-- **GitHub**: https://github.com/tumrabert/1inchXNear.git
 
 ## ✅ Production Readiness Checklist
 

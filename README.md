@@ -249,7 +249,6 @@ You will see live transaction output, including links to Etherscan for verificat
 This is a hackathon submission. For questions or suggestions:
 
 1. Open an issue on GitHub
-2. Contact: [Your contact information]
 
 ## 📄 License
 

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import {
   ArrowLeftRight,
   Zap,
@@ -12,14 +13,15 @@ import {
 } from "lucide-react";
 import FusionPlusInterface from "@/components/FusionPlusInterface";
 import RealSwapInterface from "@/components/RealSwapInterface";
-import LiveDemo from "@/components/LiveDemo";
-import SwapInterface from "@/components/SwapInterface";
+import LiquidityManager from "@/components/LiquidityManager";
 import WalletConnect from "@/components/WalletConnect";
+
 export default function Home() {
-  const wallets = {
+  const [activeTab, setActiveTab] = useState<'demo' | 'real' | 'liquidity'>('real');
+  const [wallets, setWallets] = useState({
     ethereum: { connected: false, address: "", balance: "0" },
     near: { connected: false, accountId: "", balance: "0" },
-  };
+  });
 
   return (
     <main className="min-h-screen">
@@ -158,26 +160,46 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-gray-900 mb-4">
-              Fusion+ Extension Demo
+              Real Cross-Chain Bridge Interface
             </h2>
             <p className="text-lg text-gray-600">
-              Live demo using deployed Limit Order Protocol and Near Extension
-              contracts
+              Execute real cryptocurrency transfers between Ethereum and Near using deployed contracts
             </p>
+          </div>
+
+          {/* Wallet Connection */}
+          <div className="mb-8">
+            <WalletConnect onWalletChange={setWallets} />
           </div>
 
           {/* Tab Navigation */}
           <div className="flex justify-center mb-8">
-            <div className="card-gradient p-2 rounded-lg inline-flex">
-              <button className="px-6 py-3 rounded-md font-medium bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg">
-                🚀 Fusion+ Extension
+            <div className="card-gradient p-2 rounded-lg inline-flex space-x-2">
+              <button 
+                onClick={() => setActiveTab('real')}
+                className={`px-6 py-3 rounded-md font-medium transition-all ${
+                  activeTab === 'real' 
+                    ? 'bg-gradient-to-r from-green-500 to-blue-600 text-white shadow-lg' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}>
+                🚀 Real Swaps
+              </button>
+              <button 
+                onClick={() => setActiveTab('liquidity')}
+                className={`px-6 py-3 rounded-md font-medium transition-all ${
+                  activeTab === 'liquidity' 
+                    ? 'bg-gradient-to-r from-purple-500 to-pink-600 text-white shadow-lg' 
+                    : 'text-gray-600 hover:text-gray-900'
+                }`}>
+                💰 Liquidity Pools
               </button>
             </div>
           </div>
 
           {/* Tab Content */}
           <div className="max-w-4xl mx-auto">
-            <FusionPlusInterface />
+            {activeTab === 'real' && <RealSwapInterface wallets={wallets} />}
+            {activeTab === 'liquidity' && <LiquidityManager wallets={wallets} />}
           </div>
         </div>
       </section>
